@@ -89,7 +89,7 @@ namespace LevelingAdjustment
             else
             {
                 b.DrawString(Game1.tinyFont, expString, pos, skillColor, 0, new Vector2(0, 0), 2, SpriteEffects.None, 0);
-                b.DrawString(Game1.tinyFontBorder, expString, pos - new Vector2(4, 0), Color.Black, 0, new Vector2(0, 0), 2, SpriteEffects.None, 0);
+                //b.DrawString(Game1.tinyFontBorder, expString, pos - new Vector2(4, 0), Color.Black, 0, new Vector2(0, 0), 2, SpriteEffects.None, 0);
             }
 
         }

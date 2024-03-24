@@ -201,31 +201,31 @@ namespace LevelingAdjustment
                 SetOldExpArray();
         }
 
-        private void SetLevel(int skill, int exp)
-        {
-            int level = GetLevelFromExp(exp);
-            switch (skill)
-            {
-                case FARMING_SKILL:
-                    Game1.player.FarmingLevel = level;
-                    return;
-                case MINING_SKILL:
-                    Game1.player.MiningLevel = level;
-                    return;
-                case FISHING_SKILL:
-                    Game1.player.FishingLevel = level;
-                    return;
-                case FORAGING_SKILL:
-                    Game1.player.ForagingLevel = level;
-                    return;
-                case COMBAT_SKILL:
-                    Game1.player.CombatLevel = level;
-                    return;
-                default:
-                    Monitor.Log($"SetLevel({skill})", LogLevel.Error);
-                    return;
-            }
-        }
+        //private void SetLevel(int skill, int exp)
+        //{
+        //    int level = GetLevelFromExp(exp);
+        //    switch (skill)
+        //    {
+        //        case FARMING_SKILL:
+        //            Game1.player.FarmingLevel = level;
+        //            return;
+        //        case MINING_SKILL:
+        //            Game1.player.MiningLevel = level;
+        //            return;
+        //        case FISHING_SKILL:
+        //            Game1.player.FishingLevel = level;
+        //            return;
+        //        case FORAGING_SKILL:
+        //            Game1.player.ForagingLevel = level;
+        //            return;
+        //        case COMBAT_SKILL:
+        //            Game1.player.CombatLevel = level;
+        //            return;
+        //        default:
+        //            Monitor.Log($"SetLevel({skill})", LogLevel.Error);
+        //            return;
+        //    }
+        //}
 
         /// <summary>
         /// Returns the value of the player level for the given skill number
