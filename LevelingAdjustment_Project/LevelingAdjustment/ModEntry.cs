@@ -164,7 +164,7 @@ namespace LevelingAdjustment
                 }
             }
 
-            if (conf.levelNotification)
+            if (false)//(conf.levelNotification)
             {
                 if (Game1.player.farmingLevel != oldLevels[FARMING_SKILL])
                 {
@@ -303,9 +303,9 @@ namespace LevelingAdjustment
             Monitor.Log($"GetLevelFromExp({exp})", LogLevel.Error);
             return -1;
         }
-    
 
-    private double ExperienceFactor(int skill)
+
+        private double ExperienceFactor(int skill)
         {
             switch (skill)
             {
@@ -325,7 +325,8 @@ namespace LevelingAdjustment
             }
         }
 
-        private string SkillName(int i) {
+        private string SkillName(int i)
+        {
             switch (i)
             {
                 case FARMING_SKILL:

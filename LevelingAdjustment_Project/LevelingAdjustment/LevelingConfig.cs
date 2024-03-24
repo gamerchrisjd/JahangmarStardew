@@ -13,12 +13,13 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 using System;
+
 namespace LevelingAdjustment
 {
     public class LevelingConfig
     {
         public bool expNotification = false;
-        public bool levelNotification = false;
+        //public bool levelNotification = false;
         public double generalExperienceFactor = 1;
         public double farmingExperienceFactor = 1;
         public double fishingExperienceFactor = 1;
