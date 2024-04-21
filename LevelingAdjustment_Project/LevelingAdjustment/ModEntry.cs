@@ -15,6 +15,7 @@
 
 using Netcode;
 using StardewModdingAPI;
+using StardewModdingAPI.Events;
 using StardewValley;
 
 using System.Collections.Generic;
@@ -30,6 +31,7 @@ namespace LevelingAdjustment
         public const int FORAGING_SKILL = 2;
         public const int LUCK_SKILL = 5;
         public const int COMBAT_SKILL = 4;
+        public const int MASTERY_SKILL = 6;
 
         private int[] oldExperiencePoints;
         private int[] oldLevels;
@@ -41,7 +43,7 @@ namespace LevelingAdjustment
         {
             conf = Helper.ReadConfig<LevelingConfig>();
 
-            if (conf.combatExperienceFactor < 0 || conf.farmingExperienceFactor < 0 || conf.fishingExperienceFactor < 0 || conf.foragingExperienceFactor < 0 || conf.miningExperienceFactor < 0 || conf.generalExperienceFactor < 0)
+            if (conf.combatExperienceFactor < 0 || conf.farmingExperienceFactor < 0 || conf.fishingExperienceFactor < 0 || conf.foragingExperienceFactor < 0 || conf.miningExperienceFactor < 0 || conf.generalExperienceFactor < 0 || conf.combatMasteryExperienceFactor < 0 || conf.farmingMasteryExperienceFactor < 0 || conf.fishingMasteryExperienceFactor < 0 || conf.foragingMasteryExperienceFactor < 0 || conf.miningMasteryExperienceFactor < 0 || conf.generalMasteryExperienceFactor < 0)
             {
                 Monitor.Log("ExperienceFactors in config.json must be at least 0", LogLevel.Error);
                 Monitor.Log("Deactivating mod", LogLevel.Error);
@@ -52,7 +54,7 @@ namespace LevelingAdjustment
             Helper.Events.GameLoop.UpdateTicked += GameLoop_UpdateTicked;
 
             Helper.Events.Display.RenderedWorld += Display_RenderedWorld;
-
+            Helper.Events.GameLoop.GameLaunched += OnGameLaunched;
 
             /*
             Helper.ConsoleCommands.Add("setexp", "", HandleSetExp);
@@ -65,6 +67,138 @@ namespace LevelingAdjustment
                 }
             });
             */
+        }
+
+        private void OnGameLaunched(object sender, GameLaunchedEventArgs e)
+        {
+            // get Generic Mod Config Menu's API (if it's installed)
+            var configMenu = this.Helper.ModRegistry.GetApi<IGenericModConfigMenuApi>("spacechase0.GenericModConfigMenu");
+            if (configMenu is null)
+                return;
+
+            // register mod
+            configMenu.Register(
+                mod: this.ModManifest,
+                reset: () => this.conf = new LevelingConfig(),
+                save: () => this.Helper.WriteConfig(this.conf)
+            );
+
+            configMenu.AddBoolOption(
+            mod: this.ModManifest,
+            name: () => "Experience Notification",
+            tooltip: () => "Check this box to see Experience point gains displayed above your character's head whenever gaining experience. Switches to displaying Mastery point gains once all skills are at level 10",
+            getValue: () => this.conf.expNotification,
+            setValue: value => this.conf.expNotification = value
+            );
+
+            configMenu.AddSectionTitle(
+            mod: this.ModManifest,
+            text: () => "Skill Experience",
+            tooltip: () => "The below factors affect normal skill experience gains"
+            );
+
+            configMenu.AddNumberOption(
+            mod: this.ModManifest,
+            name: () => "General Experience Factor",
+            tooltip: () => "All experience gains are multiplied by this value. Stacks multiplicatively with the individual Skill Experience Factors below",
+            getValue: () => (float)this.conf.generalExperienceFactor,
+            setValue: value => this.conf.generalExperienceFactor = value
+            );
+
+            configMenu.AddNumberOption(
+            mod: this.ModManifest,
+            name: () => "Farming Experience Factor",
+            tooltip: () => "All Farming skill experience gains are multiplied by this value. Stacks multiplicatively with the General Experience Factor above",
+            getValue: () => (float)this.conf.farmingExperienceFactor,
+            setValue: value => this.conf.farmingExperienceFactor = value
+            );
+
+            configMenu.AddNumberOption(
+            mod: this.ModManifest,
+            name: () => "Foraging Experience Factor",
+            tooltip: () => "All Foraging skill experience gains are multiplied by this value. Stacks multiplicatively with the General Experience Factor above",
+            getValue: () => (float)this.conf.foragingExperienceFactor,
+            setValue: value => this.conf.foragingExperienceFactor = value
+            );
+
+            configMenu.AddNumberOption(
+            mod: this.ModManifest,
+            name: () => "Fishing Experience Factor",
+            tooltip: () => "All Fishing skill experience gains are multiplied by this value. Stacks multiplicatively with the General Experience Factor above",
+            getValue: () => (float)this.conf.fishingExperienceFactor,
+            setValue: value => this.conf.fishingExperienceFactor = value
+            );
+
+            configMenu.AddNumberOption(
+            mod: this.ModManifest,
+            name: () => "Mining Experience Factor",
+            tooltip: () => "All Mining skill experience gains are multiplied by this value. Stacks multiplicatively with the General Experience Factor above",
+            getValue: () => (float)this.conf.miningExperienceFactor,
+            setValue: value => this.conf.miningExperienceFactor = value
+            );
+
+            configMenu.AddNumberOption(
+            mod: this.ModManifest,
+            name: () => "Combat Experience Factor",
+            tooltip: () => "All Combat skill experience gains are multiplied by this value. Stacks multiplicatively with the General Experience Factor above",
+            getValue: () => (float)this.conf.combatExperienceFactor,
+            setValue: value => this.conf.combatExperienceFactor = value
+            );
+
+            configMenu.AddSectionTitle(
+            mod: this.ModManifest,
+            text: () => "Mastery Points",
+            tooltip: () => "The below factors affect Mastery point gains once all skills are at level 10. These stack multiplicatively with the Experience Factors above, and replace the vanilla Mastery point formula. In vanilla in 1.6.4, Mastery points are calculated by taking any Skill experience earned and multiplying by 0.5"
+            );
+
+            configMenu.AddNumberOption(
+            mod: this.ModManifest,
+            name: () => "General Mastery Factor",
+            tooltip: () => "All Mastery point gains are multiplied by this value (In vanilla 1.6.4 all Mastery point gains are calculated by multiplying the skill experience by 0.5, so setting this value to 0.5 and leaving all Skill Mastery Factors below at 1 will result in vanilla behavior). Stacks multiplicatively with the individual Skill Mastery Factors below",
+            getValue: () => (float)this.conf.generalMasteryExperienceFactor,
+            setValue: value => this.conf.generalMasteryExperienceFactor = value
+            );
+
+            configMenu.AddNumberOption(
+            mod: this.ModManifest,
+            name: () => "Farming Mastery Factor",
+            tooltip: () => "All Farming Mastery point gains are multiplied by this value. Stacks multiplicatively with the General Mastery Factor above. (In vanilla 1.6.4 Farming Mastery point gains are stated by be multiplied by 0.5, but in practice all Skill mastery point gains are multiplied by 0.5)",
+            getValue: () => (float)this.conf.farmingMasteryExperienceFactor,
+            setValue: value => this.conf.farmingMasteryExperienceFactor = value
+            );
+
+            configMenu.AddNumberOption(
+            mod: this.ModManifest,
+            name: () => "Foraging Mastery Factor",
+            tooltip: () => "All Foraging Mastery point gains are multiplied by this value. Stacks multiplicatively with the General Mastery Factor above",
+            getValue: () => (float)this.conf.foragingMasteryExperienceFactor,
+            setValue: value => this.conf.foragingMasteryExperienceFactor = value
+            );
+
+            configMenu.AddNumberOption(
+            mod: this.ModManifest,
+            name: () => "Fishing Mastery Factor",
+            tooltip: () => "All Fishing Mastery point gains are multiplied by this value. Stacks multiplicatively with the General Mastery Factor above",
+            getValue: () => (float)this.conf.fishingMasteryExperienceFactor,
+            setValue: value => this.conf.fishingMasteryExperienceFactor = value
+            );
+
+            configMenu.AddNumberOption(
+            mod: this.ModManifest,
+            name: () => "Mining Mastery Factor",
+            tooltip: () => "All Mining Mastery point gains are multiplied by this value. Stacks multiplicatively with the General Mastery Factor above",
+            getValue: () => (float)this.conf.miningMasteryExperienceFactor,
+            setValue: value => this.conf.miningMasteryExperienceFactor = value
+            );
+
+            configMenu.AddNumberOption(
+            mod: this.ModManifest,
+            name: () => "Combat Mastery Factor",
+            tooltip: () => "All Combat Mastery point gains are multiplied by this value. Stacks multiplicatively with the General Mastery Factor above",
+            getValue: () => (float)this.conf.combatMasteryExperienceFactor,
+            setValue: value => this.conf.combatMasteryExperienceFactor = value
+            );
+
         }
 
         void HandleSetExp(string arg1, string[] arg2)
@@ -103,17 +237,20 @@ namespace LevelingAdjustment
 
         private void SetOldExpArray()
         {
-            oldExperiencePoints = new int[SKILL_COUNT];
+            oldExperiencePoints = new int[SKILL_COUNT+1];
             var exp = Game1.player.experiencePoints.Fields.ToArray();
+            var masteryExp = Game1.stats.Get("MasteryExp");
             for (int i = 0; i < SKILL_COUNT; i++)
                 oldExperiencePoints[i] = exp[i];
+            oldExperiencePoints[5] = (int)masteryExp;
 
-            oldLevels = new int[SKILL_COUNT];
+            oldLevels = new int[SKILL_COUNT+1];
             oldLevels[FARMING_SKILL] = Game1.player.farmingLevel;
             oldLevels[FISHING_SKILL] = Game1.player.fishingLevel;
             oldLevels[FORAGING_SKILL] = Game1.player.foragingLevel;
             oldLevels[MINING_SKILL] = Game1.player.miningLevel;
             oldLevels[COMBAT_SKILL] = Game1.player.combatLevel;
+            oldLevels[5] = StardewValley.Menus.MasteryTrackerMenu.getCurrentMasteryLevel();
         }
 
         void GameLoop_UpdateTicked(object sender, StardewModdingAPI.Events.UpdateTickedEventArgs e)
@@ -157,7 +294,47 @@ namespace LevelingAdjustment
 
                     Monitor.Log(SkillName(skill) + " exp is now " + Game1.player.experiencePoints[skill], LogLevel.Trace);
 
-                    if (conf.expNotification)
+                    if (Game1.player.Level >= 25)
+                    {
+                        int masteryDiff = (int)Game1.stats.Get("MasteryExp") - oldExperiencePoints[5];
+                        Monitor.Log($"Mastery exp is {oldExperiencePoints[5]}", LogLevel.Trace);
+                        Monitor.Log($"Mastery exp increased by {masteryDiff} (game)", LogLevel.Trace);
+                        // Basing new Mastery exp gains off the skill gains above instead of the game's mastery exp gains, to circumvent vanilla's mastery exp formula (in 1.6.4 vanilla multiplies all mastery exp gains by 0.5)
+                        //int modMasteryExpi = (int)System.Math.Ceiling(oldExperiencePoints[5] + masteryDiff * conf.generalMasteryExperienceFactor * MasteryExperienceFactor(skill));
+                        int modMasteryExpi = (int)System.Math.Ceiling(oldExperiencePoints[5] + moddiff * conf.generalMasteryExperienceFactor * MasteryExperienceFactor(skill));
+                        int modMasteryDiff = modMasteryExpi - oldExperiencePoints[5];
+                        int newMasterygain = modMasteryDiff - masteryDiff;
+                        Monitor.Log($"Mastery exp increased by {modMasteryDiff} (with factor {conf.generalMasteryExperienceFactor} * {MasteryExperienceFactor(skill)})", LogLevel.Trace);
+
+                        if (newMasterygain > 0) //mod increases mastery exp gain
+                        {
+                            Game1.stats.Set("MasteryExp", modMasteryExpi);
+                            //handles mastery level ups
+                            if (oldLevels[5] > StardewValley.Menus.MasteryTrackerMenu.getCurrentMasteryLevel())
+                            {
+                                Game1.showGlobalMessage(Game1.content.LoadString("Strings\\1_6_Strings:Mastery_newlevel"));
+                                Game1.playSound("newArtifact");
+                            }
+                        }
+                        else if (newMasterygain < 0) //mod reduces mastery exp gain
+                        {
+                            //check if mastery level was increased but modMasteryExpi would decrease the level again
+                            //in this case do nothing since otherwise the player might get notified multiple times about the new mastery level
+                            if (GetMasteryLevelFromExp(modMasteryExpi) == StardewValley.Menus.MasteryTrackerMenu.getCurrentMasteryLevel())
+                            {
+                                Game1.stats.Set("MasteryExp", modMasteryExpi);
+                            }
+                        }
+
+                        if (conf.expNotification)
+                        {
+                            expAnimations.Add(new ExpAnimation(modMasteryDiff, skill));
+                        }
+
+                        oldExperiencePoints[5] = (int)Game1.stats.Get("MasteryExp"); // Sets the new Mastery exp amount for cases like Book Of Stars which raise multiple types of experience in a single event
+                    }
+
+                    if (conf.expNotification && Game1.player.Level < 25)
                     {
                         expAnimations.Add(new ExpAnimation(moddiff, skill));
                     }
@@ -304,6 +481,39 @@ namespace LevelingAdjustment
             return -1;
         }
 
+        /// <summary>
+        /// Returns the expected Mastery level for the given exp value
+        /// </summary>
+        private int GetMasteryLevelFromExp(int exp)
+        {
+            if (0 <= exp && exp < 10000)
+            {
+                return 0;
+            }
+            if (10000 <= exp && exp < 25000)
+            {
+                return 1;
+            }
+            if (25000 <= exp && exp < 45000)
+            {
+                return 2;
+            }
+            if (45000 <= exp && exp < 70000)
+            {
+                return 3;
+            }
+            if (70000 <= exp && exp < 100000)
+            {
+                return 4;
+            }
+            if (100000 <= exp)
+            {
+                return 5;
+            }
+            Monitor.Log($"GetMasteryLevelFromExp({exp})", LogLevel.Error);
+            return -1;
+        }
+
 
         private double ExperienceFactor(int skill)
         {
@@ -321,6 +531,26 @@ namespace LevelingAdjustment
                     return conf.combatExperienceFactor;
                 default:
                     Monitor.Log($"ExperienceFactor({skill})", LogLevel.Error);
+                    return 1;
+            }
+        }
+
+        private double MasteryExperienceFactor(int skill)
+        {
+            switch (skill)
+            {
+                case FARMING_SKILL:
+                    return conf.farmingMasteryExperienceFactor;
+                case MINING_SKILL:
+                    return conf.miningMasteryExperienceFactor;
+                case FISHING_SKILL:
+                    return conf.fishingMasteryExperienceFactor;
+                case FORAGING_SKILL:
+                    return conf.foragingMasteryExperienceFactor;
+                case COMBAT_SKILL:
+                    return conf.combatMasteryExperienceFactor;
+                default:
+                    Monitor.Log($"MasteryExperienceFactor({skill})", LogLevel.Error);
                     return 1;
             }
         }

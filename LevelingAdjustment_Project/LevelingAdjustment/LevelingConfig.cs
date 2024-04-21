@@ -26,5 +26,12 @@ namespace LevelingAdjustment
         public double foragingExperienceFactor = 1;
         public double miningExperienceFactor = 1;
         public double combatExperienceFactor = 1;
+
+        public double generalMasteryExperienceFactor = 1;
+        public double farmingMasteryExperienceFactor = 0.5;
+        public double fishingMasteryExperienceFactor = 1;
+        public double foragingMasteryExperienceFactor = 1;
+        public double miningMasteryExperienceFactor = 1;
+        public double combatMasteryExperienceFactor = 1;
     }
 }
