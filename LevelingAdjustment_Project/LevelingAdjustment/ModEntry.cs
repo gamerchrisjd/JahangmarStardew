@@ -91,6 +91,14 @@ namespace LevelingAdjustment
             setValue: value => this.conf.expNotification = value
             );
 
+            configMenu.AddBoolOption(
+            mod: this.ModManifest,
+            name: () => "Round Partial Experience Points",
+            tooltip: () => "By default (when this setting is disabled/unchecked), if the Experience/Mastery Factor value would result in partial XP/Mastery points for an action, that action will give a % chance to gain a whole XP/Mastery point to accurately reflect the chosen Experience/Mastery Factor on average in all situations. If enabled, partial XP/Mastery points are always rounded to the nearest whole number, with a minimum of 1 XP if it would otherwise round to 0 XP. E.G. An action giving 1.6 XP points becomes 1 XP point with a 60% chance for an additional 1 XP point with this setting disabled, or if enabled is always rounded to 2 XP points.",
+            getValue: () => this.conf.roundPartialExp,
+            setValue: value => this.conf.roundPartialExp = value
+            );
+
             configMenu.AddSectionTitle(
             mod: this.ModManifest,
             text: () => "Skill Experience",
@@ -100,7 +108,7 @@ namespace LevelingAdjustment
             configMenu.AddNumberOption(
             mod: this.ModManifest,
             name: () => "General Experience Factor",
-            tooltip: () => "All experience gains are multiplied by this value. Stacks multiplicatively with the individual Skill Experience Factors below",
+            tooltip: () => "All experience gains for any skill are multiplied by this value. Stacks multiplicatively with the individual Skill Experience Factors below",
             getValue: () => (float)this.conf.generalExperienceFactor,
             setValue: value => this.conf.generalExperienceFactor = value
             );
@@ -148,13 +156,13 @@ namespace LevelingAdjustment
             configMenu.AddSectionTitle(
             mod: this.ModManifest,
             text: () => "Mastery Points",
-            tooltip: () => "The below factors affect Mastery point gains once all skills are at level 10. These stack multiplicatively with the Experience Factors above, and replace the vanilla Mastery point formula. In vanilla in 1.6.4, Mastery points are calculated by taking any Skill experience earned and multiplying by 0.5"
+            tooltip: () => "In Vanilla once all skills are at level 10, every 1 Experience Point earned in any skill is converted into 1 Mastery Point (except for Farming). The below factors affect Mastery point gains, replacing the vanilla Mastery Point Factors (in Vanilla all Mastery Point Factors are 1, except Farming which is 0.5). Because Mastery Point gains come from Experience Point gains, the final total Mastery Points you earn from an action depend on both the Mastery Factors and Experience Factors you have set."
             );
 
             configMenu.AddNumberOption(
             mod: this.ModManifest,
             name: () => "General Mastery Factor",
-            tooltip: () => "All Mastery point gains are multiplied by this value (In vanilla 1.6.4 all Mastery point gains are calculated by multiplying the skill experience by 0.5, so setting this value to 0.5 and leaving all Skill Mastery Factors below at 1 will result in vanilla behavior). Stacks multiplicatively with the individual Skill Mastery Factors below",
+            tooltip: () => "All Mastery point gains from any skill are multiplied by this value. Stacks multiplicatively with the individual Skill Mastery Factors below",
             getValue: () => (float)this.conf.generalMasteryExperienceFactor,
             setValue: value => this.conf.generalMasteryExperienceFactor = value
             );
@@ -162,7 +170,7 @@ namespace LevelingAdjustment
             configMenu.AddNumberOption(
             mod: this.ModManifest,
             name: () => "Farming Mastery Factor",
-            tooltip: () => "All Farming Mastery point gains are multiplied by this value. Stacks multiplicatively with the General Mastery Factor above. (In vanilla 1.6.4 Farming Mastery point gains are stated by be multiplied by 0.5, but in practice all Skill mastery point gains are multiplied by 0.5)",
+            tooltip: () => "All Mastery point gains from Farming Experience are multiplied by this value. Stacks multiplicatively with the General Mastery Factor above. (Farming Mastery point gains are multiplied by 0.5 in Vanilla)",
             getValue: () => (float)this.conf.farmingMasteryExperienceFactor,
             setValue: value => this.conf.farmingMasteryExperienceFactor = value
             );
@@ -170,7 +178,7 @@ namespace LevelingAdjustment
             configMenu.AddNumberOption(
             mod: this.ModManifest,
             name: () => "Foraging Mastery Factor",
-            tooltip: () => "All Foraging Mastery point gains are multiplied by this value. Stacks multiplicatively with the General Mastery Factor above",
+            tooltip: () => "All Mastery point gains from Foraging Experience are multiplied by this value. Stacks multiplicatively with the General Mastery Factor above",
             getValue: () => (float)this.conf.foragingMasteryExperienceFactor,
             setValue: value => this.conf.foragingMasteryExperienceFactor = value
             );
@@ -178,7 +186,7 @@ namespace LevelingAdjustment
             configMenu.AddNumberOption(
             mod: this.ModManifest,
             name: () => "Fishing Mastery Factor",
-            tooltip: () => "All Fishing Mastery point gains are multiplied by this value. Stacks multiplicatively with the General Mastery Factor above",
+            tooltip: () => "All Mastery point gains from Fishing Experience are multiplied by this value. Stacks multiplicatively with the General Mastery Factor above",
             getValue: () => (float)this.conf.fishingMasteryExperienceFactor,
             setValue: value => this.conf.fishingMasteryExperienceFactor = value
             );
@@ -186,7 +194,7 @@ namespace LevelingAdjustment
             configMenu.AddNumberOption(
             mod: this.ModManifest,
             name: () => "Mining Mastery Factor",
-            tooltip: () => "All Mining Mastery point gains are multiplied by this value. Stacks multiplicatively with the General Mastery Factor above",
+            tooltip: () => "All Mastery point gains from Mining Experience are multiplied by this value. Stacks multiplicatively with the General Mastery Factor above",
             getValue: () => (float)this.conf.miningMasteryExperienceFactor,
             setValue: value => this.conf.miningMasteryExperienceFactor = value
             );
@@ -194,7 +202,7 @@ namespace LevelingAdjustment
             configMenu.AddNumberOption(
             mod: this.ModManifest,
             name: () => "Combat Mastery Factor",
-            tooltip: () => "All Combat Mastery point gains are multiplied by this value. Stacks multiplicatively with the General Mastery Factor above",
+            tooltip: () => "All Mastery point gains from Combat Experience are multiplied by this value. Stacks multiplicatively with the General Mastery Factor above",
             getValue: () => (float)this.conf.combatMasteryExperienceFactor,
             setValue: value => this.conf.combatMasteryExperienceFactor = value
             );
@@ -259,12 +267,16 @@ namespace LevelingAdjustment
                 return;
 
             bool expchanged = false;
+            double randomNumber = Utility.getRandomDouble(0, 1);
 
             var gameexp = Game1.player.experiencePoints.Fields.ToArray();
             for (int skill = 0; skill < SKILL_COUNT; skill++)
             {
                 int gameexpi = gameexp[skill];
                 int diff = gameexpi - oldExperiencePoints[skill];
+                int moddiff = 0;
+                double partialXP = 0;
+                double moddiffInitial = 0;
                 if (diff > 0)
                 {
                     expchanged = true;
@@ -272,10 +284,38 @@ namespace LevelingAdjustment
                     Monitor.Log(SkillName(skill) + " exp is " + oldExperiencePoints[skill], LogLevel.Trace);
                     Monitor.Log(SkillName(skill) + " exp increased by " + diff + " (game)", LogLevel.Trace);
 
-                    int modexpi = (int)System.Math.Ceiling(oldExperiencePoints[skill] + diff * conf.generalExperienceFactor * ExperienceFactor(skill));
-                    int moddiff = modexpi - oldExperiencePoints[skill];
+                    moddiffInitial = diff * conf.generalExperienceFactor * ExperienceFactor(skill);
+                    partialXP = moddiffInitial - System.Math.Floor(moddiffInitial);
+                    if (partialXP != 0 && !conf.roundPartialExp)
+                    {
+                        Monitor.Log($"Modded exp gain is {System.Math.Floor(moddiffInitial)} with a {partialXP * 100}% chance for +1 exp", LogLevel.Trace);
+                        if (partialXP > randomNumber)
+                        {
+                            moddiff = (int)System.Math.Floor(moddiffInitial) + 1;
+                        }
+                        else
+                        {
+                            moddiff = (int)System.Math.Floor(moddiffInitial);
+                        }
+                    }
+                    else if (partialXP != 0 && conf.roundPartialExp)
+                    {
+                        moddiff = (int)System.Math.Round(moddiffInitial, MidpointRounding.AwayFromZero);
+                        Monitor.Log($"\"Round Partial Experience Points\" is enabled, so exp was rounded from {moddiffInitial} to {moddiff}", LogLevel.Trace);
+                        if (moddiff == 0)
+                        {
+                            moddiff = 1;
+                            Monitor.Log("exp was rounded down to 0, so it was set instead to 1.", LogLevel.Trace);
+                        }
+                    }
+                    else
+                    {
+                        moddiff = (int)System.Math.Round(moddiffInitial, MidpointRounding.AwayFromZero);
+                    }
+                    
+                    int modexpi = oldExperiencePoints[skill] + moddiff;
                     int newgain = moddiff - diff;
-                    Monitor.Log(SkillName(skill) + " exp increased by " + moddiff + " (with factor " + conf.generalExperienceFactor + "*" + ExperienceFactor(skill), LogLevel.Trace);
+                    Monitor.Log(SkillName(skill) + " exp increased by " + moddiff + " (with factor " + conf.generalExperienceFactor + "*" + ExperienceFactor(skill) + ")", LogLevel.Trace);
 
                     if (newgain > 0) //mod increases exp gain
                     {
@@ -296,13 +336,42 @@ namespace LevelingAdjustment
 
                     if (Game1.player.Level >= 25)
                     {
+                        int modMasteryDiff = 0;
                         int masteryDiff = (int)Game1.stats.Get("MasteryExp") - oldExperiencePoints[5];
                         Monitor.Log($"Mastery exp is {oldExperiencePoints[5]}", LogLevel.Trace);
                         Monitor.Log($"Mastery exp increased by {masteryDiff} (game)", LogLevel.Trace);
                         // Basing new Mastery exp gains off the skill gains above instead of the game's mastery exp gains, to circumvent vanilla's mastery exp formula (in 1.6.4 vanilla multiplies all mastery exp gains by 0.5)
                         //int modMasteryExpi = (int)System.Math.Ceiling(oldExperiencePoints[5] + masteryDiff * conf.generalMasteryExperienceFactor * MasteryExperienceFactor(skill));
-                        int modMasteryExpi = (int)System.Math.Ceiling(oldExperiencePoints[5] + moddiff * conf.generalMasteryExperienceFactor * MasteryExperienceFactor(skill));
-                        int modMasteryDiff = modMasteryExpi - oldExperiencePoints[5];
+                        double modMasteryDiffInitial = moddiff * conf.generalMasteryExperienceFactor * MasteryExperienceFactor(skill);
+                        double partialMasteryXP = modMasteryDiffInitial - System.Math.Floor(modMasteryDiffInitial);
+                        if (partialMasteryXP != 0 && !conf.roundPartialExp)
+                        {
+                            Monitor.Log($"Modded Mastery exp gain is {System.Math.Floor(modMasteryDiffInitial)} with a {partialMasteryXP * 100}% chance for +1 Mastery exp", LogLevel.Trace);
+                            if (partialMasteryXP > randomNumber)
+                            {
+                                modMasteryDiff = (int)System.Math.Floor(modMasteryDiffInitial) + 1;
+                            }
+                            else
+                            {
+                                modMasteryDiff = (int)System.Math.Floor(modMasteryDiffInitial);
+                            }
+                        }
+                        else if (partialMasteryXP != 0 && conf.roundPartialExp)
+                        {
+                            modMasteryDiff = (int)System.Math.Round(modMasteryDiffInitial, MidpointRounding.AwayFromZero);
+                            Monitor.Log($"\"Round Partial Experience Points\" is enabled, so Mastery exp was rounded from {modMasteryDiffInitial} to {modMasteryDiff}", LogLevel.Trace);
+                            if (modMasteryDiff == 0)
+                            {
+                                modMasteryDiff = 1;
+                                Monitor.Log("Mastery exp was rounded down to 0, so it was set instead to 1.", LogLevel.Trace);
+                            }
+                        }
+                        else
+                        {
+                            modMasteryDiff = (int)System.Math.Round(modMasteryDiffInitial, MidpointRounding.AwayFromZero);
+                        }
+
+                        int modMasteryExpi = oldExperiencePoints[5] + modMasteryDiff;
                         int newMasterygain = modMasteryDiff - masteryDiff;
                         Monitor.Log($"Mastery exp increased by {modMasteryDiff} (with factor {conf.generalMasteryExperienceFactor} * {MasteryExperienceFactor(skill)})", LogLevel.Trace);
 

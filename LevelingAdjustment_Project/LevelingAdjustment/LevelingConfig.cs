@@ -19,6 +19,7 @@ namespace LevelingAdjustment
     public class LevelingConfig
     {
         public bool expNotification = false;
+        public bool roundPartialExp = false;
         //public bool levelNotification = false;
         public double generalExperienceFactor = 1;
         public double farmingExperienceFactor = 1;
